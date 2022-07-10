@@ -92,7 +92,7 @@ jobs:
           keys:
             - backend-build
       - run:
-          name: scan frontend
+          name: scan backend
           command: |
             cd backend
             npm install
