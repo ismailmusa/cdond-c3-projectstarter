@@ -80,7 +80,24 @@ jobs:
             cd frontend
             npm install
             # npm install oauth-sign@^0.9.0
-            npm audit --audit-level=critical             
+            npm audit --audit-level=critical
+
+  scan-backend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Yarn Package Cache
+          keys:
+            - backend-build
+      - run:
+          name: scan frontend
+          command: |
+            cd backend
+            npm install
+            # npm install oauth-sign@^0.9.0
+            npm audit --audit-level=critical                       
 workflows:
   say-hello-workflow:
     jobs:
@@ -91,6 +108,8 @@ workflows:
       - test-backend:
           requires: [build-backend]
       - scan-frontend:
-          requires: [build-frontend]      
+          requires: [build-frontend]
+      - scan-backend:
+          requires: [build-backend]       
             
 
