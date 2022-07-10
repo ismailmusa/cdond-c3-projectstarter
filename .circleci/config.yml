@@ -32,6 +32,25 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
+          
+  test-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Yarn Package Cache
+          keys:
+            - frontend-build
+      - run:
+          name: frontend test
+          command: |
+            cd frontend
+            npm install
+            npm run test
+
+      # Restore from cache
+      # Your job code here        
 workflows:
   say-hello-workflow:
     jobs:
