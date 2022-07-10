@@ -5,29 +5,64 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-frontend:
+  install-backend-dependencies:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
       - run:
-          name: Install dependencies
-          command: |
-            cd frontend
-            npm install
-            npm run build
-     
+          name: npm install
+          working_directory: ./backend
+          command: ls -la && npm install
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/node_modules
+
+
+  install-frontend-dependencies:
+   docker:
+      - image: circleci/node:13.8.0
+   steps:
+      - checkout
+      - run:
+          name: npm install
+          working_directory: ./frontend
+          command: ls -la && npm install
+      - persist_to_workspace:
+          root: .
+          paths:
+            - frontend/node_modules
+
+
   build-backend:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - run:
-          name: Install dependencies
-          command: |
-            cd backend
-            npm install
-            npm run build
+          name: npm run build
+          working_directory: ./backend
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/dist
+
+
+  build-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: npm run build
+          working_directory: ./frontend
+          command: npm run build
       
 workflows:
   say-hello-workflow:
