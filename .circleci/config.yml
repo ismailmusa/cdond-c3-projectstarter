@@ -177,6 +177,28 @@ jobs:
 
 
       - destroy_environment
+
+  run-migrations:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run migrations
+          command: |
+            cd backend
+            npm install
+            npm run migrations --force > migrations_dump.txt
+      - destroy_environment
+      - run:
+          name: Send migration results to memstash
+          command: |
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
+            then
+                curl https://kvdb.io/DmPzNRr7xW6ytRdy4pqUPj/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+            fi
 workflows:
   say-hello-workflow:
     jobs:
