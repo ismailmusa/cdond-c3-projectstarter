@@ -143,10 +143,12 @@ jobs:
       - run:
           name: Add back-end ip to ansible inventory
           command: |
+            cd .circleci/ansible
             aws ec2 describe-instances \
-              --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --output text >> inventory
+            cat inventory
            
       - persist_to_workspace:
           root: .
@@ -165,11 +167,14 @@ jobs:
       - run:
           name: Install ansible
           command: |
+            cd .circleci/ansible
             apk add --update ansible
       - run:
           name: Run Playbook and Configure server
           command: |
-            ansible-playbook -i ./.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+            cd .circleci/ansible
+            ansible-playbook -i inventory.txt configure-server.yml
+
 
       - destroy_environment
 workflows:
