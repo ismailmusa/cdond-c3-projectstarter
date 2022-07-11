@@ -220,3 +220,14 @@ workflows:
       - configure-infrastructure:
           requires:
             - deploy-infrastructure
+      - run-migrations:
+          requires:
+            - test-backend
+            - test-frontend
+            - scan-backend
+            - scan-frontend
+            - configure-infrastructure
+          filters:
+            branches:
+              only:
+                - master
