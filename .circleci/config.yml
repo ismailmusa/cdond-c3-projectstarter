@@ -168,12 +168,12 @@ jobs:
             cd .circleci/ansible/
             apk add --update ansible
             ansible --version
-      - destroy_environment
       - run:
           name: Configure server
           command: |
             cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
+
       - destroy_environment
 workflows:
   say-hello-workflow:
