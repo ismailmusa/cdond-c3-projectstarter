@@ -159,8 +159,8 @@ jobs:
             aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --output text >> inventory
-            cat inventory   
+              --output text >> inventory.txt
+            cat inventory.txt
               
       - run:
           name: Ensure front-end infrastructure exist
@@ -177,6 +177,7 @@ jobs:
             - .circleci/ansible/inventory.txt
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
+
   configure-infrastructure:
     docker:
       - image: python:3.9.0-alpine
@@ -196,7 +197,6 @@ jobs:
           command: |
             cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
-
 
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
