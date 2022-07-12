@@ -153,8 +153,14 @@ jobs:
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}     
+      - run:
+          name: Add back-end ip to ansible inventory
+          command: |
+            aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --output text >> inventory
+            cat inventory   
               
       - run:
           name: Ensure front-end infrastructure exist
@@ -164,24 +170,13 @@ jobs:
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-      
-      - run:
-          name: Add back-end ip to ansible inventory
-          command: |
-            cd .circleci/ansible
-            aws ec2 describe-instances \
-              --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --output text >> inventory
-            cat inventory
            
       - persist_to_workspace:
           root: .
           paths:
             - .circleci/ansible/inventory.txt
-
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
   configure-infrastructure:
     docker:
       - image: python:3.9.0-alpine
@@ -219,8 +214,6 @@ jobs:
             cd backend
             npm install
             npm run migrations --force > migrations_dump.txt
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Send migration results to memstash
           command: |
@@ -267,8 +260,7 @@ jobs:
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
-      - revert-migrations:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
+  
 
   deploy-backend:
     docker:
@@ -302,11 +294,12 @@ jobs:
             cat inventory.txt
             ls -l ~/project/
             ansible-playbook -i inventory.txt deploy-backend.yml
-
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
       - revert-migrations:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}                             
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+      
+                               
 workflows:
   say-hello-workflow:
     jobs:
