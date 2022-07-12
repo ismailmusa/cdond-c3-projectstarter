@@ -1,16 +1,41 @@
 version: 2.1
 
 commands:
-  destroy_environment:
+  destroy-environment:
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
+    parameters:
+      id:
+        type: string
     steps:
       - run:
-          name: Destroy environment
-          # ${CIRCLE_WORKFLOW_ID} is a Built-in environment variable 
-          # ${CIRCLE_WORKFLOW_ID:0:5} takes the first 5 chars of the variable CIRCLE_CI_WORKFLOW_ID 
+          name: Destroy backend cfn stack
+          command: |
+            aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.id >>
+          when: on_fail
+      - run:
+          name: Destroy frontend cfn stack and S3 bucket
+          command: |
+            aws s3 rm s3://udapeople-<< parameters.id >> --recursive
+            aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.id >>
+          when: on_fail
+
+  revert-migrations:
+    description: Revert the last migration if successfully the current workflow
+    parameters:
+      id:
+        type: string
+    steps:
+      - run:
+          name: Revert migrations
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name udapeople-${CIRCLE_WORKFLOW_ID:0:5}
-
+            SUCCESS=$(curl --insecure  https://kvdb.io/NnowyGhYzJyAAsC8uqaBvW/udacity)
+            if(( "$SUCCESS" == "success")); 
+            then
+              cd backend
+              npm install
+              npm run migrations:revert
+            fi
 
 jobs:
   build-frontend:
@@ -128,7 +153,8 @@ jobs:
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-      - destroy_environment      
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}     
               
       - run:
           name: Ensure front-end infrastructure exist
@@ -138,7 +164,8 @@ jobs:
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-      - destroy_environment
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
       
       - run:
           name: Add back-end ip to ansible inventory
@@ -176,7 +203,8 @@ jobs:
             ansible-playbook -i inventory.txt configure-server.yml
 
 
-      - destroy_environment
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
 
   run-migrations:
     docker:
@@ -191,7 +219,8 @@ jobs:
             cd backend
             npm install
             npm run migrations --force > migrations_dump.txt
-      - destroy_environment
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Send migration results to memstash
           command: |
@@ -199,6 +228,47 @@ jobs:
             then
                 curl https://kvdb.io/DmPzNRr7xW6ytRdy4pqUPj/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
+
+  deploy-frontend:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: install dependencies
+          command: |
+            yum update -y
+            yum install -y tar gzip
+            curl -sL https://rpm.nodesource.com/setup_13.x |  bash -
+            yum install -y nodejs
+
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Get backend url
+          command: |
+            export BACKEND_IP=$( aws ec2 describe-instances \
+            --query 'Reservations[*].Instances[*].PublicIpAddress' \
+            --filters "Name=tag:project,Values=udapeople" \
+            --output text)
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "API_URL = ${API_URL}"
+            echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+            cat frontend/.env
+      - run:
+          name: Deploy frontend objects
+          command: |
+            cd frontend
+            cat .env
+            npm install
+            npm run build
+            ls -al
+            tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+            aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}                       
 workflows:
   say-hello-workflow:
     jobs:
@@ -231,3 +301,6 @@ workflows:
             branches:
               only:
                 - master
+      - deploy-frontend:
+          requires:
+            - run-migrations          
