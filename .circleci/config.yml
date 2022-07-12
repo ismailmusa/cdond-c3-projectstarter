@@ -180,7 +180,7 @@ jobs:
 
   configure-infrastructure:
     docker:
-      - image: python:3.9.0-alpine
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
       - add_ssh_keys:
@@ -190,13 +190,12 @@ jobs:
       - run:
           name: Install ansible
           command: |
-            cd .circleci/ansible
             apk add --update ansible
       - run:
           name: Run Playbook and Configure server
           command: |
-            cd .circleci/ansible
-            ansible-playbook -i inventory.txt configure-server.yml
+            cat .circleci/ansible/inventory.txt
+            ansible-playbook -i ./.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
 
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
