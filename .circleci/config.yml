@@ -268,7 +268,45 @@ jobs:
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
       - revert-migrations:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}                       
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+
+  deploy-backend:
+    docker:
+      - image: python:3.9.0-alpine
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["87:97:e1:0d:dc:20:bd:73:44:5c:c6:49:e3:19:d6:7a"]
+
+      - run:
+          name: Install dependencies
+          command: |
+            yum update -y
+            yum install -y  tar gzip
+            curl -sL https://rpm.nodesource.com/setup_13.x | bash -
+            yum install -y nodejs
+            amazon-linux-extras install -y epel
+            yum install -y ansible
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Deploy backend
+          command: |
+            cd backend
+            npm install
+            npm run build
+            cd ..         
+            tar -C backend -czvf artifact.tar.gz .
+            cd .circleci/ansible
+            echo "Contents  of the inventory.txt file is -------"
+            cat inventory.txt
+            ls -l ~/project/
+            ansible-playbook -i inventory.txt deploy-backend.yml
+
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}                             
 workflows:
   say-hello-workflow:
     jobs:
@@ -303,4 +341,7 @@ workflows:
                 - master
       - deploy-frontend:
           requires:
-            - run-migrations          
+            - run-migrations
+      - deploy-backend:
+          requires:
+            - run-migrations               
