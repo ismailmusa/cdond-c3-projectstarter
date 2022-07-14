@@ -8,13 +8,17 @@ commands:
         type: string
     steps:
       - run:
-          name: Destroy backend cfn stack
-          when: on_fail
+          name: Destroy backend stack
           command: |
-            echo "Destroying environment: << parameters.id >>"
-            aws s3 rm s3://udapeople-<<parameters.id>> --recursive
-            aws cloudformation delete-stack --stack-name udapeople-backend-<<parameters.id>>
-            aws cloudformation delete-stack --stack-name udapeople-frontend-<<parameters.id>>
+            aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.id >>
+          when: on_fail
+      - run:
+          name: Destroy frontend stack and S3 bucket
+          command: |
+            aws s3 rm s3://udapeople-<< parameters.id >> --recursive
+            aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.id >>
+          when: on_fail
+
 
   revert-migrations:
     description: Revert the last migration if successfully the current workflow
@@ -173,9 +177,6 @@ jobs:
           paths:
             - .circleci/ansible/inventory.txt
 
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-
   configure-infrastructure:
     docker:
       - image: python:3.7-alpine3.11
@@ -194,9 +195,6 @@ jobs:
           command: |
             cat .circleci/ansible/inventory.txt
             ansible-playbook -i ./.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
-
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
 
   run-migrations:
     docker:
@@ -293,9 +291,6 @@ jobs:
             ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
-      - revert-migrations:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-
   smoke-test:
     docker:
       # Lightweight Docker image
