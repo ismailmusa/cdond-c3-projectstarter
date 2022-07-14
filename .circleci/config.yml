@@ -34,7 +34,7 @@ commands:
               npm install
               npm run migrations:revert
             fi
-
+aws-cli: circleci/aws-cli@2.0.3
 jobs:
   build-frontend:
     docker:
