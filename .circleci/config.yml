@@ -9,15 +9,12 @@ commands:
     steps:
       - run:
           name: Destroy backend cfn stack
-          command: |
-            aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.id >>
           when: on_fail
-      - run:
-          name: Destroy frontend cfn stack and S3 bucket
           command: |
-            aws s3 rm s3://udapeople-<< parameters.id >> --recursive
-            aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.id >>
-          when: on_fail
+            echo "Destroying environment: << parameters.id >>"
+            aws s3 rm s3://udapeople-<<parameters.id>> --recursive
+            aws cloudformation delete-stack --stack-name udapeople-backend-<<parameters.id>>
+            aws cloudformation delete-stack --stack-name udapeople-frontend-<<parameters.id>>
 
   revert-migrations:
     description: Revert the last migration if successfully the current workflow
