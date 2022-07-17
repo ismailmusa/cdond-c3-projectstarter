@@ -132,7 +132,7 @@ jobs:
           command: |
             cd backend
             npm install
-            npm audit fix --audit-level=critical --force
+            npm audit fix --audit-level=critical
 
 
   deploy-infrastructure:
@@ -202,10 +202,10 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - restore_cache:
-          name: Restore Yarn Package Cache
-          keys:
-            - backend-build
+          key: backend-build 
       - run:
           name: Run migrations
           command: |
@@ -215,7 +215,7 @@ jobs:
       - run:
           name: Send migration results to memstash
           command: |
-            if grep -q "has been executed successfully." ./backend/migrations_dump.txt
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
                 curl https://kvdb.io/DmPzNRr7xW6ytRdy4pqUPj/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
@@ -235,7 +235,7 @@ jobs:
             yum install -y nodejs
 
       - attach_workspace:
-          at: ~/
+          at: .
       - run:
           name: Get backend url
           command: |
@@ -251,10 +251,8 @@ jobs:
           name: Deploy frontend objects
           command: |
             cd frontend
-            cat .env
             npm install
             npm run build
-            ls -al
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment:
@@ -267,7 +265,7 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-          fingerprints: ["87:97:e1:0d:dc:20:bd:73:44:5c:c6:49:e3:19:d6:7a"]
+          fingerprints: ["1e:e8:5e:76:c1:59:c4:45:8f:4b:7b:b3:f6:5a:72:5e"]
 
       - run:
           name: Install dependencies
@@ -284,16 +282,17 @@ jobs:
           name: Deploy backend
           command: |
             cd backend
-            npm i
+            npm install
             npm run build
-            cd ..
-            # Zip the directory
+            cd ..         
             tar -C backend -czvf artifact.tar.gz .
             cd .circleci/ansible
             echo "Contents  of the inventory.txt file is -------"
-            cat .circleci/ansible/inventory.txt
-            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+            cat inventory.txt
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations:
           id: ${CIRCLE_WORKFLOW_ID:0:7}
   smoke-test:
     docker:
@@ -307,7 +306,7 @@ jobs:
           command: |
             apk add --update --no-cache curl aws-cli tar gzip nodejs npm
       - attach_workspace:
-          at: ~/
+          at: .
       - run:
           name: Backend smoke test.
           command: |
