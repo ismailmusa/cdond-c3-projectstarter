@@ -267,10 +267,6 @@ jobs:
           fingerprints: ["87:97:e1:0d:dc:20:bd:73:44:5c:c6:49:e3:19:d6:7a"]
       - attach_workspace:
           at: .
-      - attach_workspace:
-          at: /tmp/workspace
-      - restore_cache:
-          key: backend-build
       - run:
           name: Install dependencies
           command: |
