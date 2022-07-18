@@ -267,6 +267,18 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints: ["87:97:e1:0d:dc:20:bd:73:44:5c:c6:49:e3:19:d6:7a"]
+      - attach_workspace:
+          at: .
+      - attach_workspace:
+          at: /tmp/workspace
+      - restore_cache:
+          key: backend-build
+      - run:
+          name: Install dependencies
+          command: |
+            # your code here
+            apk add --update ansible openssh-client tar gzip curl nodejs npm
+            pip install awscli    
 
       - run:
           name: Install dependencies
@@ -277,12 +289,6 @@ jobs:
             yum install -y nodejs
             amazon-linux-extras install -y epel
             yum install -y ansible
-      - attach_workspace:
-          at: .
-      - attach_workspace:
-          at: /tmp/workspace
-      - restore_cache:
-          key: backend-build
       - run:
           name: Deploy backend
           command: |
