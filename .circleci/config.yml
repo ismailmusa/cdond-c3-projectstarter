@@ -212,6 +212,7 @@ jobs:
             cd backend
             npm install
             npm run migrations --force > migrations_dump.txt
+            cat migrations_dump.txt
       - run:
           name: Send migration results to memstash
           command: |
@@ -278,6 +279,10 @@ jobs:
             yum install -y ansible
       - attach_workspace:
           at: .
+      - attach_workspace:
+          at: /tmp/workspace
+      - restore_cache:
+          key: backend-build
       - run:
           name: Deploy backend
           command: |
