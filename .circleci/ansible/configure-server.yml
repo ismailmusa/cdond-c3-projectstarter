@@ -25,6 +25,7 @@
   # Get the environment variables from CircleCI and add to the EC2 instance
   roles:
     - configure-server
+    - configure-prometheus-node-exporter
 
   environment:
     - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
